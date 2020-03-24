@@ -3,13 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@atlaskit/button": "^13.3.9",
+    "@atlaskit/icon": "^20.1.0",
+    "@atlaskit/item": "^11.0.2",
+    "@atlaskit/navigation": "^36.0.3",
+    "@atlaskit/tree": "^7.1.2",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "react": "^16.13.0",
     "react-beautiful-dnd": "^13.0.0",
     "react-dom": "^16.13.0",
-    "react-scripts": "3.4.0"
+    "react-scripts": "3.4.0",
+    "styled-components": "^5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",

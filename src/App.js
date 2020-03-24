@@ -1,93 +1,118 @@
-import React, {useState} from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import ChevronDownIcon from '@atlaskit/icon/glyph/chevron-down';
+import ChevronRightIcon from '@atlaskit/icon/glyph/chevron-right';
+import Button from '@atlaskit/button';
+import Tree, {
+    mutateTree,
+    moveItemOnTree
+} from '@atlaskit/tree';
+import baseItem, { withItemClick, withItemFocus } from '@atlaskit/item';
+import { treeWithTwoBranches }from './packages/mock';
+import Content from './Content';
 
-const getItems = count =>
-    Array.from({ length: count }, (v, k) => k).map(k => ({
-        id: `item-${k}`,
-        content: `question ${k}`
-    }));
+const Container = styled.div`
+  display: flex;
+`;
 
-const reorder = (list, startIndex, endIndex) => {
-    const result = Array.from(list);
-    const [removed] = result.splice(startIndex, 1);
-    console.log(removed);
-    result.splice(endIndex, 0, removed);
+const Dot = styled.span`
+  display: flex;
+  width: 24px;
+  height: 32px;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 32px;
+`;
 
-    return result;
-};
-
-const grid = 8;
-
-const getItemStyle = (isDragging, draggableStyle) => ({
-    // some basic styles to make the items look a bit nicer
-    userSelect: "none",
-    padding: grid * 2,
-    margin: `0 0 ${grid}px 0`,
-
-    // change background colour if dragging
-    background: isDragging ? "lightgreen" : "grey",
-
-    // styles we need to apply on draggables
-    ...draggableStyle
-});
-
-const getListStyle = isDraggingOver => ({
-    background: isDraggingOver ? "lightblue" : "lightgrey",
-    padding: grid,
-    width: 250
-});
+const Item = withItemClick(withItemFocus(baseItem));
 
 function App() {
-  const [items, setItems] = useState(getItems(10));
 
-  const onDragEnd = result => {
-        if (!result.destination) {
+    const [tree, setTree] = useState(treeWithTwoBranches);
+    const [selectedNode, setSelectedNode] = useState(null);
+
+    const getIcon = (item, onExpand, onCollapse) => {
+        if (item.children && item.children.length > 0) {
+            return item.isExpanded ? (
+                <Button
+                    spacing="none"
+                    appearance="subtle-link"
+                    onClick={() => onCollapse(item.id)}
+                >
+                    <ChevronDownIcon label="" size="medium" />
+                </Button>
+            ) : (
+                <Button
+                    spacing="none"
+                    appearance="subtle-link"
+                    onClick={() => onExpand(item.id)}
+                >
+                    <ChevronRightIcon label="" size="medium" />
+                </Button>
+            );
+        }
+        return <Dot>&bull;</Dot>;
+    };
+
+    const renderItem = ({
+                      item,
+                      onExpand,
+                      onCollapse,
+                      provided,
+                      snapshot,
+                  }) => {
+        return (
+            <div ref={provided.innerRef} {...provided.draggableProps}>
+                <Item
+                    isDragging={snapshot.isDragging}
+                    //text={item.data ? item.data.title : ''}
+                    elemBefore={getIcon(item, onExpand, onCollapse)}
+                    dnd={{ dragHandleProps: provided.dragHandleProps }}
+                    //theme={{}}
+                    onClick={() => setSelectedNode(item)}
+                >{item.data ? item.data.title : ''}</Item>
+            </div>
+        );
+    };
+
+    const onExpand = itemId => {
+        console.log(itemId);
+        setTree(mutateTree(tree, itemId, { isExpanded: true }));
+    };
+
+    const onCollapse = itemId => {
+        setTree(mutateTree(tree, itemId, { isExpanded: false }));
+    };
+
+    const onDragEnd = (source, destination) => {
+
+        console.log(source, destination);
+
+        if (!destination) {
             return;
         }
 
-        const reordersItems = reorder(
-            items,
-            result.source.index,
-            result.destination.index
-        );
+        if (source.parentId !== destination.parentId) {
+            return;
+        }
 
-        setItems(reordersItems);
-  };
+        const newTree = moveItemOnTree(tree, source, destination);
+        setTree(newTree);
+    };
+
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', height: 'auto'}}>
-      <DragDropContext onDragEnd={result => onDragEnd(result)}>
-          <Droppable droppableId="droppable">
-              {(provided, snapshot) => (
-                  <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      style={getListStyle(snapshot.isDraggingOver)}
-                  >
-                      {items.map((item, index) => (
-                          <Draggable key={item.id} draggableId={item.id} index={index}>
-                          {(provided, snapshot) => (
-                              <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  style={getItemStyle(
-                                      snapshot.isDragging,
-                                      provided.draggableProps.style
-                                  )}
-                              >
-                                  {item.content}
-                              </div>
-                          )}
-                          </Draggable>
-                      ))}
-                      {provided.placeholder}
-                  </div>
-              )}
-
-          </Droppable>
-      </DragDropContext>
-    </div>
+      <Container>
+              <Tree
+                  tree={tree}
+                  renderItem={renderItem}
+                  onExpand={onExpand}
+                  onCollapse={onCollapse}
+                  onDragEnd={onDragEnd}
+                  isDragEnabled
+              />
+          <Content node={selectedNode}/>
+      </Container>
   );
 }
 
