@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState, useEffect} from 'react';
 import styled from 'styled-components';
 import ChevronDownIcon from '@atlaskit/icon/glyph/chevron-down';
 import ChevronRightIcon from '@atlaskit/icon/glyph/chevron-right';
@@ -7,9 +7,18 @@ import Tree, {
     mutateTree,
     moveItemOnTree
 } from '@atlaskit/tree';
-import baseItem, { withItemClick, withItemFocus } from '@atlaskit/item';
-import { treeWithTwoBranches }from './packages/mock';
+import baseItem, {withItemClick, withItemFocus} from '@atlaskit/item';
+import {treeWithTwoBranches, sample} from './packages/mock';
 import Content from './Content';
+import {getFirstLeaf, findParentNode} from './utils/tree-search';
+import firebase from './firebase';
+import axios from 'axios';
+import {initialTree} from './utils/tree-generation';
+import * as _ from 'lodash';
+
+
+export const LEFT = 'LEFT';
+export const RIGHT = 'RIGHT';
 
 const Container = styled.div`
   display: flex;
@@ -28,8 +37,49 @@ const Item = withItemClick(withItemFocus(baseItem));
 
 function App() {
 
-    const [tree, setTree] = useState(treeWithTwoBranches);
-    const [selectedNode, setSelectedNode] = useState(null);
+    const [tree, setTree] = useState({});
+    const leftMostLeaf = getFirstLeaf(sample.items, sample.items[1]);
+    const [selectedNode, setSelectedNode] = useState(leftMostLeaf);
+
+    useEffect(() => {
+
+        axios.get('http://34.211.0.229/firebase/custom/token', {
+            headers: {
+                Authorization: `Bearer ${process.env.REACT_APP_BACK_END_TOKEN}`
+            }
+        })
+            .then(function (response) {
+                firebase
+                    .auth()
+                    .signInWithCustomToken(response.data.token)
+                    .then(data => {
+
+                        firebase.database()
+                            .ref(`audits/2000/5e81c4848ff9d2001b90e0ad`)
+                            .once('value')
+                            .then(snapshot => {
+                                //console.log(snapshot.val());
+                            });
+
+                        firebase
+                            .database()
+                            .ref(`audit_questions/2000/5e81c4848ff9d2001b90e0ad`)
+                            .on('value', snapshot => {
+                                setTree(initialTree(snapshot.val()));
+                            });
+
+                    })
+                    .catch(error => {
+                        console.log(error);
+                    });
+            })
+            .catch(function (error) {
+                console.log(error);
+            })
+
+    }, []);
+
+    //console.log(findParentNode(treeWithTwoBranches.items, '1-1-1'))
 
     const getIcon = (item, onExpand, onCollapse) => {
         if (item.children && item.children.length > 0) {
@@ -69,7 +119,11 @@ function App() {
                     elemBefore={getIcon(item, onExpand, onCollapse)}
                     dnd={{ dragHandleProps: provided.dragHandleProps }}
                     //theme={{}}
-                    onClick={() => setSelectedNode(item)}
+                    onClick={() => {
+                        setSelectedNode(item);
+
+                    }}
+                    //isSelected={!!(selectedNode && (item.id === selectedNode.id))}
                 >{item.data ? item.data.title : ''}</Item>
             </div>
         );
@@ -101,19 +155,25 @@ function App() {
     };
 
 
-  return (
-      <Container>
-              <Tree
-                  tree={tree}
-                  renderItem={renderItem}
-                  onExpand={onExpand}
-                  onCollapse={onCollapse}
-                  onDragEnd={onDragEnd}
-                  isDragEnabled
-              />
-          <Content node={selectedNode}/>
-      </Container>
-  );
+    return (
+        <Container>
+            {!_.isEmpty(tree) &&
+            (<>
+                <Tree
+                    tree={tree}
+                    renderItem={renderItem}
+                    onExpand={onExpand}
+                    onCollapse={onCollapse}
+                    onDragEnd={onDragEnd}
+                    isDragEnabled
+                />
+                {/*<Content node={selectedNode}/>*/}
+            </>)
+            }
+
+
+        </Container>
+    );
 }
 
 export default App;
