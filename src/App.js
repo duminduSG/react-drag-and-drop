@@ -13,7 +13,7 @@ import Content from './Content';
 import {getFirstLeaf, findParentNode} from './utils/tree-search';
 import firebase from './firebase';
 import axios from 'axios';
-import {initialTree} from './utils/tree-generation';
+import {initialTree, searchTree} from './utils/tree-generation';
 import * as _ from 'lodash';
 
 
@@ -38,8 +38,12 @@ const Item = withItemClick(withItemFocus(baseItem));
 function App() {
 
     const [tree, setTree] = useState({});
+    const [rawData, setRawData] = useState(null);
+    const [searchValue, setSearchValue] = useState(null);
     const leftMostLeaf = getFirstLeaf(sample.items, sample.items[1]);
     const [selectedNode, setSelectedNode] = useState(leftMostLeaf);
+
+    //console.log(searchValue);
 
     useEffect(() => {
 
@@ -55,7 +59,7 @@ function App() {
                     .then(data => {
 
                         firebase.database()
-                            .ref(`audits/2000/5e81c4848ff9d2001b90e0ad`)
+                            .ref(`audits/2000/5e8abee88dd6ef001a26a859`)
                             .once('value')
                             .then(snapshot => {
                                 //console.log(snapshot.val());
@@ -63,9 +67,9 @@ function App() {
 
                         firebase
                             .database()
-                            .ref(`audit_questions/2000/5e81c4848ff9d2001b90e0ad`)
+                            .ref(`audit_questions/2000/5e8abee88dd6ef001a26a859`)
                             .on('value', snapshot => {
-                                setTree(initialTree(snapshot.val()));
+                                setRawData(snapshot.val());
                             });
 
                     })
@@ -78,6 +82,20 @@ function App() {
             })
 
     }, []);
+
+    useEffect(() => {
+        if(rawData) {
+            setTree(initialTree(filterRawData(rawData)));
+        }
+
+    }, [rawData]);
+
+    useEffect(() => {
+        if(searchValue) {
+            setTree(initialTree(filterRawData(rawData)));
+        }
+
+    }, [searchValue]);
 
     //console.log(findParentNode(treeWithTwoBranches.items, '1-1-1'))
 
@@ -154,9 +172,21 @@ function App() {
         setTree(newTree);
     };
 
+    const filterRawData = data => {
+        if(searchValue) {
+            return searchTree(searchValue, data);
+        }
+        return data;
+    };
+
 
     return (
         <Container>
+            <div><input
+                placeholder="Search Questions"
+                onChange={e => setSearchValue(e.target.value)}
+            />
+            </div>
             {!_.isEmpty(tree) &&
             (<>
                 <Tree

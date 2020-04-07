@@ -1,4 +1,5 @@
 import * as _ from 'lodash';
+import question from "@atlaskit/icon/glyph/question";
 
 let treeTemplateMock = {
     rootId: '1',
@@ -24,6 +25,40 @@ const getUniqueCategories = data => {
     );
 }
 ;
+
+export const searchTree = (searchValue, data) => {
+    const selectedAllQuestions = _.values(data).filter(
+        question =>
+            (question.question.toLowerCase().includes(searchValue.toLowerCase()) ||
+                question.explanation.toLowerCase().includes(searchValue.toLowerCase()))
+    );
+
+    const selectedParentQuestions = selectedAllQuestions.filter(question => question.parent_question_id.toString() === '0');
+    const selectedChildQuestions = selectedAllQuestions.filter(question => question.parent_question_id.toString() !== '0');
+
+    const selectedParentQuestionsIds = selectedParentQuestions.map(question => question.question_id);
+    const selectedChildQuestionsParentIds = selectedChildQuestions.map(question => question.parent_question_id);
+
+    let childQuestionsOfParentQuestions = [];
+    let parentQuestionsOfChildQuestions = [];
+
+    _.values(data).forEach(question => {
+        if(question.parent_question_id.toString() !== '0' && selectedParentQuestionsIds.includes(question.parent_question_id)){
+            childQuestionsOfParentQuestions.push(question)
+        }
+
+        if(question.parent_question_id.toString() === '0' && selectedChildQuestionsParentIds.includes(question.question_id)){
+            parentQuestionsOfChildQuestions.push(question)
+        }
+    });
+
+    const uniqQuestions = _.uniqBy([...selectedAllQuestions, ...childQuestionsOfParentQuestions, ...parentQuestionsOfChildQuestions], 'question_id');
+
+    return  _.sortBy(uniqQuestions, ['question_id']);
+
+
+};
+
 export const initialTree = data => {
     let treeTemplate = _.cloneDeep(treeTemplateMock);
     const uniqueCategories = getUniqueCategories(data);
@@ -39,7 +74,7 @@ export const initialTree = data => {
             isExpanded: true,
             isChildrenLoading: false,
             data: {
-                title: category.category_name
+                title: category.category_name.concat('-').concat(category.category_id)
             }
         };
 
@@ -53,7 +88,7 @@ export const initialTree = data => {
                 isExpanded: true,
                 isChildrenLoading: false,
                 data: {
-                    title: question.explanation,
+                    title: question.explanation.concat('-').concat(question.question_id),
                     question: {...question}
                 }
             }
