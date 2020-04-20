@@ -26,6 +26,29 @@ const getUniqueCategories = data => {
 }
 ;
 
+const getCustomCategories = data => {
+    return _.uniqBy(
+        _.values(data)
+            .filter(question => {
+                if(question.is_custom) {
+                    return {category_id: question.category_id, category_name: question.category_name}
+            }}),
+        'category_id'
+    );
+}
+
+const getQuestionGroups = data => {
+    let questionGroups = []
+    _.values(data)
+        .forEach(question => {
+            if(question.question_groups) {
+                let groups = question.question_groups.map(questionGroup => questionGroup);
+                questionGroups = [...questionGroups, groups];
+            }
+        })
+    return _.uniqBy(questionGroups, 'question_group_id');
+}
+
 export const searchTree = (searchValue, data) => {
     const selectedAllQuestions = _.values(data).filter(
         question =>
@@ -65,6 +88,7 @@ export const initialTree = data => {
 
     uniqueCategories.map(category => {
 
+        //_.sortBy(_.values(data).filter(item => item.category_id === category.category_id), 'question_order');
         const categoryQuestions = _.values(data).filter(item => item.category_id === category.category_id);
         treeTemplate.items['1'].children.push(category.category_id.toString());
         treeTemplate.items[category.category_id] = {
@@ -74,9 +98,12 @@ export const initialTree = data => {
             isExpanded: true,
             isChildrenLoading: false,
             data: {
-                title: category.category_name.concat('-').concat(category.category_id)
+                title: category.category_name.concat('-').concat(category.category_id),
+                isCategory: true
             }
         };
+
+        let i = 0;
 
         categoryQuestions.map(question => {
 
@@ -88,8 +115,9 @@ export const initialTree = data => {
                 isExpanded: true,
                 isChildrenLoading: false,
                 data: {
-                    title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question}
+                    title: question.explanation.concat('-').concat(question.question_id).concat(`index-${i}`),
+                    question: {...question},
+                    index: question.parent_question_id.toString() === '0' ? i++ : null
                 }
             }
 
