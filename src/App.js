@@ -60,7 +60,7 @@ function App() {
                     .then(data => {
 
                         firebase.database()
-                            .ref(`audits/2085/5e8c5da472512d001449724d`)
+                            .ref(`audits/2000/5e9d735d8eec76001bd63a81`)
                             .once('value')
                             .then(snapshot => {
                                 //console.log(snapshot.val());
@@ -68,7 +68,7 @@ function App() {
 
                         firebase
                             .database()
-                            .ref(`audit_questions/2085/5e8c5da472512d001449724d`)
+                            .ref(`audit_questions/2000/5e9d735d8eec76001bd63a81`)
                             .on('value', snapshot => {
                                 setRawData(snapshot.val());
                             });
@@ -112,6 +112,7 @@ function App() {
             }
 
             const flattenedTree = flattenTree(alteredTree);
+            console.log(flattenedTree)
             const categories = flattenedTree.filter(item => item.item.data.isCategory).map((category, index) => {
                 return {category_id: category.item.id, index}
             })
