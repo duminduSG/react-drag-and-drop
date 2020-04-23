@@ -20,7 +20,7 @@ let treeTemplateMock = {
 
 const getUniqueCategories = data => {
     return  _.uniqBy(
-        _.values(data).filter(question => !question.is_custom && !question.question_groups).map(question => {return {category_id: question.category_id, category_name: question.category_name}}),
+        _.values(data).filter(question => !question.is_custom && !question.question_groups).map(question => {return {category_id: question.category_id, category_name: question.category_name, category_order: question.category_order}}),
         'category_id'
     );
 }
@@ -59,7 +59,7 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
             isChildrenLoading: false,
             data: {
                 title: category.category_name.concat('-').concat(category.category_id).concat('-custom'),
-                isCategory: true
+                isCustomQuestionCategory: true
             }
         };
 
@@ -75,7 +75,7 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
                     question: {...question},
-                    isCustomCategory: true
+                    isCustomQuestionCategoryQuestion: true
                 }
             }
 
@@ -101,6 +101,8 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
 
 const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => {
     const questionGroupQuestions = _.values(data).filter(question => question.is_custom && question.question_groups);
+    //console.log(questionGroups)
+    //console.log(questionGroupQuestions)
     //TODO: check the array.includes method for the filtering
     questionGroups.forEach(group => {
         let questionGroupQuestionsByCategory = [];
@@ -114,39 +116,40 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
         treeTemplate.items['1'].children.push(group.question_group_id.toString());
         treeTemplate.items[group.question_group_id] = {
             id: group.question_group_id.toString(),
-            children: questionGroupQuestionsByCategory.filter(item => item.parent_question_id.toString() === '0').map(item => item.question_id),
+            children: questionGroupQuestionsByCategory.filter(item => item.parent_question_id.toString() === '0').map(item => `${item.question_id}_group_${group.question_group_id}`),
             hasChildren: true,
             isExpanded: true,
             isChildrenLoading: false,
             data: {
                 title: group.question_group_name.concat('-').concat(group.question_group_id),
-                isGroup: true
+                isQuestionGroup: true
             }
         };
 
         questionGroupQuestionsByCategory.map(question => {
 
 
-            treeTemplate.items[question.question_id] = {
-                id: question.question_id.toString(),
+            treeTemplate.items[`${question.question_id}_group_${group.question_group_id}`] = {
+                id: `${question.question_id.toString()}_group_${group.question_group_id}`,
                 children: [],
                 hasChildren: false,
                 isExpanded: true,
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question}
+                    question: {...question},
+                    isQuestionGroupQuestion: true
                 }
             }
 
 
             if(question.parent_question_id.toString() !== '0') {
 
-                if(treeTemplate.items[question.parent_question_id] &&
-                    treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
+                if(treeTemplate.items[`${question.parent_question_id}_group_${group.question_group_id}`] &&
+                    treeTemplate.items[`${question.parent_question_id}_group_${group.question_group_id}`].data.question.selected_answer_id === question.question_answer_id) {
 
-                    treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
-                    treeTemplate.items[question.parent_question_id].hasChildren = true;
+                    treeTemplate.items[`${question.parent_question_id}_group_${group.question_group_id}`].children.push(`${question.question_id}_group_${group.question_group_id}`);
+                    treeTemplate.items[`${question.parent_question_id}_group_${group.question_group_id}`].hasChildren = true;
                 }
 
             }
@@ -193,15 +196,13 @@ export const searchTree = (searchValue, data) => {
 
 export const initialTree = data => {
     let treeTemplate = _.cloneDeep(treeTemplateMock);
-    const uniqueCategories = getUniqueCategories(data);
+    const uniqueCategories = _.sortBy(getUniqueCategories(data), 'category_order');
     const customCategories = getCustomCategories(data);
     const questionGroups = getQuestionGroups(data);
 
-
     uniqueCategories.map(category => {
 
-        //_.sortBy(_.values(data).filter(item => item.category_id === category.category_id), 'question_order');
-        const categoryQuestions = _.values(data).filter(item => item.category_id === category.category_id && !question.is_custom && !question.question_groups );
+        const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !question.is_custom && !question.question_groups ), 'question_order');
         treeTemplate.items['1'].children.push(category.category_id.toString());
         treeTemplate.items[category.category_id] = {
             id: category.category_id.toString(),
@@ -211,7 +212,7 @@ export const initialTree = data => {
             isChildrenLoading: false,
             data: {
                 title: category.category_name.concat('-').concat(category.category_id),
-                isCategory: true
+                isSimplifyaCategory: true
             }
         };
 
@@ -226,7 +227,8 @@ export const initialTree = data => {
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question}
+                    question: {...question},
+                    isSimplifyaQuestion: true
                 }
             }
 

@@ -16,6 +16,7 @@ import firebase from './firebase';
 import axios from 'axios';
 import {initialTree, searchTree} from './utils/tree-generation';
 import * as _ from 'lodash';
+import VidVolumeMutedIcon from '@atlaskit/icon/glyph/vid-volume-muted';
 
 
 export const LEFT = 'LEFT';
@@ -35,6 +36,50 @@ const Dot = styled.span`
 `;
 
 const Item = withItemClick(withItemFocus(baseItem));
+
+const createCategoryQuestionOrder = flattenedTree => {
+    const categories = flattenedTree.filter(item => item.item.data.isSimplifyaCategory || item.item.data.isCustomQuestionCategory).map((category, index) => {
+        return {category_id: category.item.id, index}
+    })
+    const questions = flattenedTree.filter(item => item.item.data.question && (item.item.data.isSimplifyaQuestion || item.item.data.isCustomQuestionCategoryQuestion) && item.item.data.question.parent_question_id.toString() === '0');
+    return  questions.map((question, index) => {
+        const categoryOrder = categories.filter(category => category.category_id === question.item.data.question.category_id.toString())
+        return {...question.item.data.question, question_order: index + 1, category_order: categoryOrder[0].index}
+    })
+}
+
+const createQuestionGroupQuestionOrder = flattenedTree => {
+    const questionGroups = flattenedTree.filter(item => item.item.data.isQuestionGroup).map((questionGroup, index) => {
+        return {question_group_id: questionGroup.item.id, children: questionGroup.item.children, index}
+    });
+
+    const questions = flattenedTree.filter(item =>  item.item.data.question &&
+        item.item.data.isQuestionGroupQuestion &&
+        item.item.data.question.parent_question_id.toString() === '0');
+
+    const mapQuestions = _.unionBy(questions.map(item => item.item.data.question), 'question_id');
+
+    questionGroups.forEach(questionGroup => {
+        mapQuestions.forEach(question=> {
+
+            const questionIndexOfGroup = questionGroup.children.findIndex(child => child === `${question.question_id}_group_${questionGroup.question_group_id}`);
+
+            if(questionIndexOfGroup !== -1) {
+                const selectedGroup = question.question_groups.find(group => group.question_group_id === questionGroup.question_group_id);
+                if(selectedGroup) {
+                    selectedGroup.group_order = questionGroup.index;
+                    selectedGroup.question_order_in_group = questionIndexOfGroup;
+                }
+            }
+
+        })
+    })
+
+    return mapQuestions;
+
+}
+
+
 
 function App() {
 
@@ -60,7 +105,7 @@ function App() {
                     .then(data => {
 
                         firebase.database()
-                            .ref(`audits/2000/5e9d735d8eec76001bd63a81`)
+                            .ref(`audits/2085/5e9ffe79edc741001b3aa95d`)
                             .once('value')
                             .then(snapshot => {
                                 //console.log(snapshot.val());
@@ -68,7 +113,7 @@ function App() {
 
                         firebase
                             .database()
-                            .ref(`audit_questions/2000/5e9d735d8eec76001bd63a81`)
+                            .ref(`audit_questions/2085/5e9ffe79edc741001b3aa95d`)
                             .on('value', snapshot => {
                                 setRawData(snapshot.val());
                             });
@@ -112,19 +157,26 @@ function App() {
             }
 
             const flattenedTree = flattenTree(alteredTree);
-            console.log(flattenedTree)
-            const categories = flattenedTree.filter(item => item.item.data.isCategory).map((category, index) => {
-                return {category_id: category.item.id, index}
-            })
+            //console.log(flattenedTree)
+            const orderedCategoryQuestions = createCategoryQuestionOrder(flattenedTree);
+            const orderedGroupQuestions = createQuestionGroupQuestionOrder(flattenedTree);
 
-            const questions = flattenedTree.filter(item => item.item.data.question && item.item.data.question.parent_question_id.toString() === '0');
-            const orderedQuestions = questions.map((question, index) => {
-                const categoryOrder = categories.filter(category => category.category_id === question.item.data.question.category_id.toString())
-                return {...question.item.data.question, question_order: index + 1, category_order: categoryOrder[0].index}
-            })
+            let updates = {}
+            orderedCategoryQuestions.forEach(question => {
+                updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_order'] = question.question_order;
+                updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/category_order'] = question.category_order;
+            });
+            orderedGroupQuestions.forEach(question => {
+                updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_groups'] = question.question_groups;
+            });
 
-            //console.log(orderedQuestions)
-            let updates = {};
+            const ref = firebase
+                .app()
+                .database()
+                .ref();
+            ref.update(updates);
+
+            /*let updates = {};
             const ref = firebase
                 .app()
                 .database()
@@ -134,12 +186,12 @@ function App() {
                 .ref(`audit_questions/2085`)
                 .child('5e8c5da472512d001449724d')
                 .on('value', function(snapshot) {
-                    orderedQuestions.forEach(question => {
+                    orderedCategoryQuestions.forEach(question => {
                         updates['audit_questions/2085/5e8c5da472512d001449724d/' + question.question_id + '/question_order'] = question.question_order;
                         updates['audit_questions/2085/5e8c5da472512d001449724d/' + question.question_id + '/category_order'] = question.category_order;
                     })
 
-                });
+                });*/
             //ref.update(updates);
             //console.log(updates)
 
@@ -196,7 +248,10 @@ function App() {
 
                     }}
                     //isSelected={!!(selectedNode && (item.id === selectedNode.id))}
-                >{item.data ? item.data.title : ''}</Item>
+                >
+                    {item.data ? item.data.title : ''}
+                    <> {item.data && item.data.question && item.data.question.muted ? <VidVolumeMutedIcon/> : null}</>
+                </Item>
             </div>
         );
     };
@@ -248,7 +303,7 @@ function App() {
 
         const flattenedTree = flattenTree(alteredTree);
         console.log(flattenedTree)
-        const categories = flattenedTree.filter(item => item.item.data.isCategory);
+        const categories = flattenedTree.filter(item => item.item.data.isSimplifyaCategory);
         const questions = flattenedTree.filter(item => item.item.data.question);
 
         const orderedQuestions = questions.map((question, index) => {
