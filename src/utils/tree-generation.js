@@ -48,7 +48,7 @@ const getQuestionGroups = data => {
 
 const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) => {
     customCategories.forEach(category => {
-        const customCategoryQuestions = _.values(data).filter(question => question.is_custom && !question.question_groups && question.category_id === category.category_id);
+        const customCategoryQuestions = _.sortBy(_.values(data).filter(question => question.is_custom && !question.question_groups && question.category_id === category.category_id), 'question_order');
 
         treeTemplate.items['1'].children.push(category.category_id.toString());
         treeTemplate.items[category.category_id] = {
@@ -111,6 +111,8 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
                 questionGroupQuestionsByCategory = [ ...questionGroupQuestionsByCategory , question];
             }
         });
+
+        questionGroupQuestionsByCategory = _.sortBy(questionGroupQuestionsByCategory, `question_order_in_group_${group.question_group_id}`);
 
 
         treeTemplate.items['1'].children.push(group.question_group_id.toString());
@@ -197,8 +199,8 @@ export const searchTree = (searchValue, data) => {
 export const initialTree = data => {
     let treeTemplate = _.cloneDeep(treeTemplateMock);
     const uniqueCategories = _.sortBy(getUniqueCategories(data), 'category_order');
-    const customCategories = getCustomCategories(data);
-    const questionGroups = getQuestionGroups(data);
+    const customCategories = _.sortBy(getCustomCategories(data), 'category_order');
+    const questionGroups = _.sortBy(getQuestionGroups(data), 'group_order');
 
     uniqueCategories.map(category => {
 

@@ -74,7 +74,7 @@ const createQuestionGroupQuestionOrder = flattenedTree => {
 
         })
     })
-
+    //console.log(mapQuestions)
     return mapQuestions;
 
 }
@@ -168,6 +168,11 @@ function App() {
             });
             orderedGroupQuestions.forEach(question => {
                 updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_groups'] = question.question_groups;
+                question.question_groups.forEach(group => {
+                    updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/group_order_' + group.question_group_id] = group.group_order;
+                    updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_order_in_group_' + group.question_group_id] = group.question_order_in_group;
+                })
+
             });
 
             const ref = firebase
