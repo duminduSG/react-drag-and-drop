@@ -17,6 +17,8 @@ import axios from 'axios';
 import {initialTree, searchTree} from './utils/tree-generation';
 import * as _ from 'lodash';
 import VidVolumeMutedIcon from '@atlaskit/icon/glyph/vid-volume-muted';
+import history from './history';
+import { useLocation } from 'react-router-dom'
 
 
 export const LEFT = 'LEFT';
@@ -83,11 +85,12 @@ const createQuestionGroupQuestionOrder = flattenedTree => {
 
 function App() {
 
+    let location = useLocation();
     const [tree, setTree] = useState({});
     const [rawData, setRawData] = useState(null);
     const [searchValue, setSearchValue] = useState(null);
     const leftMostLeaf = getFirstLeaf(sample.items, sample.items[1]);
-    const [selectedNode, setSelectedNode] = useState(leftMostLeaf);
+    const [selectedNode, setSelectedNode] = useState({});
 
     //console.log(searchValue);
 
@@ -105,7 +108,7 @@ function App() {
                     .then(data => {
 
                         firebase.database()
-                            .ref(`audits/2085/5e9ffe79edc741001b3aa95d`)
+                            .ref(`audits/2000/5ea2948ff937cf001bf800b2`)
                             .once('value')
                             .then(snapshot => {
                                 //console.log(snapshot.val());
@@ -113,7 +116,7 @@ function App() {
 
                         firebase
                             .database()
-                            .ref(`audit_questions/2085/5e9ffe79edc741001b3aa95d`)
+                            .ref(`audit_questions/2000/5ea2948ff937cf001bf800b2`)
                             .on('value', snapshot => {
                                 setRawData(snapshot.val());
                             });
@@ -144,6 +147,42 @@ function App() {
     }, [searchValue]);
 
     useEffect(() => {
+        const urlParams = location.pathname.split('/').slice(4);
+        if(!_.isEmpty(tree) && !_.isEmpty(urlParams)) {
+            const categoryOrGroupItem = tree.items[urlParams[0]];
+            let questionItem;
+            if(categoryOrGroupItem.children.includes(urlParams[1])) {
+                questionItem = tree.items[urlParams[1]];
+            } else {
+                questionItem = tree.items[`${urlParams[1]}_group_${urlParams[0]}`]
+            }
+            if(urlParams[2]) {
+                let childQuestionItem;
+                if(questionItem.children.includes(urlParams[2])) {
+                    childQuestionItem = tree.items[urlParams[2]];
+                } else {
+                    childQuestionItem = tree.items[`${urlParams[2]}_group_${urlParams[0]}`]
+                }
+                setSelectedNode(childQuestionItem);
+            } else {
+                setSelectedNode(questionItem);
+            }
+
+        } else if(!_.isEmpty(tree) && _.isEmpty(urlParams)) {
+            const firstItemToSelect = getItem(tree, [0,0]);
+            setSelectedNode(firstItemToSelect);
+            buildRouteForSelectedItem(firstItemToSelect);
+        }
+
+    }, [location.pathname, tree]);
+
+    useEffect(() => {
+        if(!_.isEmpty(selectedNode)) {
+            console.log(selectedNode)
+        }
+    }, [selectedNode])
+
+    useEffect(() => {
         if(!_.isEmpty(tree)) {
             let clonedTree = _.cloneDeep(tree);
             let alteredTreeItems = {};
@@ -163,14 +202,15 @@ function App() {
 
             let updates = {}
             orderedCategoryQuestions.forEach(question => {
-                updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_order'] = question.question_order;
-                updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/category_order'] = question.category_order;
+                updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/question_order'] = question.question_order;
+                updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/category_order'] = question.category_order;
             });
+
             orderedGroupQuestions.forEach(question => {
-                updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_groups'] = question.question_groups;
+                updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/question_groups'] = question.question_groups;
                 question.question_groups.forEach(group => {
-                    updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/group_order_' + group.question_group_id] = group.group_order;
-                    updates['audit_questions/2085/5e9ffe79edc741001b3aa95d/' + question.question_id + '/question_order_in_group_' + group.question_group_id] = group.question_order_in_group;
+                    updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/group_order_' + group.question_group_id] = group.group_order;
+                    updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/question_order_in_group_' + group.question_group_id] = group.question_order_in_group;
                 })
 
             });
@@ -181,24 +221,7 @@ function App() {
                 .ref();
             ref.update(updates);
 
-            /*let updates = {};
-            const ref = firebase
-                .app()
-                .database()
-                .ref();
-            firebase
-                .database()
-                .ref(`audit_questions/2085`)
-                .child('5e8c5da472512d001449724d')
-                .on('value', function(snapshot) {
-                    orderedCategoryQuestions.forEach(question => {
-                        updates['audit_questions/2085/5e8c5da472512d001449724d/' + question.question_id + '/question_order'] = question.question_order;
-                        updates['audit_questions/2085/5e8c5da472512d001449724d/' + question.question_id + '/category_order'] = question.category_order;
-                    })
 
-                });*/
-            //ref.update(updates);
-            //console.log(updates)
 
             //console.log(getItem(tree, [1, 0]))
             //console.log(getTreePosition(tree, [0, 1]))
@@ -208,10 +231,32 @@ function App() {
 
     }, [tree]);
 
-    //console.log(findParentNode(treeWithTwoBranches.items, '1-1-1'))
+    const buildRouteForSelectedItem = item => {
+        if(item.data.isSimplifyaQuestion || item.data.isCustomQuestionCategoryQuestion) {
+            let route;
+            if(item.data.question.parent_question_id === '0') {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${item.data.question.category_id}/${item.data.question.question_id}`
+            } else {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${item.data.question.category_id}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
+            }
+            history.push(route);
+
+        } else if(item.data.isQuestionGroupQuestion) {
+            let route;
+            const idInfo = item.id.split('_');
+            if(item.data.question.parent_question_id === '0') {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${idInfo[2]}/${item.data.question.question_id}`
+            } else {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${idInfo[2]}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
+            }
+            history.push(route);
+        }
+
+    }
 
     const getIcon = (item, onExpand, onCollapse) => {
-        if (item.children && item.children.length > 0) {
+        if (item.children && item.children.length > 0 &&
+            (item.data.isSimplifyaCategory || item.data.isCustomQuestionCategory || item.data.isQuestionGroup)) {
             return item.isExpanded ? (
                 <Button
                     spacing="none"
@@ -250,9 +295,12 @@ function App() {
                     //theme={{}}
                     onClick={() => {
                         setSelectedNode(item);
-
+                        buildRouteForSelectedItem(item);
+                        if(item.data.isSimplifyaCategory || item.data.isCustomQuestionCategory || item.data.isQuestionGroup) {
+                            item.isExpanded ? onCollapse(item.id) : onExpand(item.id);
+                        }
                     }}
-                    //isSelected={!!(selectedNode && (item.id === selectedNode.id))}
+                    isSelected={!!(selectedNode && (item.id === selectedNode.id))}
                 >
                     {item.data ? item.data.title : ''}
                     <> {item.data && item.data.question && item.data.question.muted ? <VidVolumeMutedIcon/> : null}</>

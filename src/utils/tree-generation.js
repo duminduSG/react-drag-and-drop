@@ -29,7 +29,7 @@ const getUniqueCategories = data => {
 const getCustomCategories = data => {
     return _.uniqBy(
         _.values(data)
-            .filter(question => question.is_custom).map(question => {return {category_id: question.category_id, category_name: question.category_name}}),
+            .filter(question => question.is_custom).map(question => {return {category_id: question.category_id, category_name: question.category_name, category_order: question.category_order}}),
         'category_id'
     );
 }
@@ -55,7 +55,7 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
             id: category.category_id.toString(),
             children: customCategoryQuestions.filter(item => item.parent_question_id.toString() === '0').map(item => item.question_id),
             hasChildren: true,
-            isExpanded: true,
+            isExpanded: false,
             isChildrenLoading: false,
             data: {
                 title: category.category_name.concat('-').concat(category.category_id).concat('-custom'),
@@ -120,7 +120,7 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
             id: group.question_group_id.toString(),
             children: questionGroupQuestionsByCategory.filter(item => item.parent_question_id.toString() === '0').map(item => `${item.question_id}_group_${group.question_group_id}`),
             hasChildren: true,
-            isExpanded: true,
+            isExpanded: false,
             isChildrenLoading: false,
             data: {
                 title: group.question_group_name.concat('-').concat(group.question_group_id),
@@ -203,14 +203,14 @@ export const initialTree = data => {
     const questionGroups = _.sortBy(getQuestionGroups(data), 'group_order');
 
     uniqueCategories.map(category => {
-
-        const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !question.is_custom && !question.question_groups ), 'question_order');
+        //console.log(category)
+        const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !item.is_custom && !item.question_groups ), 'question_order');
         treeTemplate.items['1'].children.push(category.category_id.toString());
         treeTemplate.items[category.category_id] = {
             id: category.category_id.toString(),
             children: categoryQuestions.filter(item => item.parent_question_id.toString() === '0').map(item => item.question_id),
             hasChildren: true,
-            isExpanded: true,
+            isExpanded: false,
             isChildrenLoading: false,
             data: {
                 title: category.category_name.concat('-').concat(category.category_id),
