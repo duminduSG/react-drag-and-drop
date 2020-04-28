@@ -262,3 +262,40 @@ export const initialTree = data => {
 
     return treeTemplate;
 };
+
+
+export const buildQuestionViewTree = data => {
+    const questions = _.values(data);
+    const parentQuestionIds = questions.filter(item => item.parent_question_id.toString() === '0').map(question => question.question_id.toString());
+    let treeTemplate = _.cloneDeep(treeTemplateMock);
+    treeTemplate.items['1'].children = parentQuestionIds;
+
+    questions.map(question => {
+
+        treeTemplate.items[question.question_id] = {
+            id: question.question_id.toString(),
+            children: [],
+            hasChildren: false,
+            isExpanded: true,
+            isChildrenLoading: false,
+            data: {
+                title: question.explanation.concat('-').concat(question.question_id),
+                question: {...question},
+            }
+        }
+
+        if(question.parent_question_id.toString() !== '0') {
+
+            if(treeTemplate.items[question.parent_question_id] &&
+                treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
+
+                treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
+                treeTemplate.items[question.parent_question_id].hasChildren = true;
+            }
+
+        }
+
+    });
+
+    return treeTemplate;
+}

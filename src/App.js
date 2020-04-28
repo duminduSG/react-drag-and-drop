@@ -18,7 +18,7 @@ function App() {
     let location = useLocation();
     const [tree, setTree] = useState({});
     const [searchValue, setSearchValue] = useState(null);
-    const [isQuestionView, setIsQuestionView] = useState(false);
+    const [isQuestionView, setIsQuestionView] = useState(true);
     const [questionList, setQuestionList] = useState({});
 
     useEffect(() => {
@@ -84,7 +84,7 @@ function App() {
                 (<span onClick={() => setIsQuestionView(!isQuestionView)}><EditorBulletListIcon/></span>) :
                 (<span onClick={() => setIsQuestionView(!isQuestionView)}><BitbucketBranchesIcon/></span>)}
             {isQuestionView ?
-                <QuestionViewTree/> :
+                <QuestionViewTree questionList={questionList}/> :
                 <CategoryViewTree questionList={questionList}/>}
         </Container>
     );

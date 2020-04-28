@@ -9,19 +9,12 @@ import Tree, {
 } from '@atlaskit/tree';
 import { flattenTree, getItem, getTreePosition, getParent } from '@atlaskit/tree/dist/cjs/utils/tree';
 import baseItem, {withItemClick, withItemFocus} from '@atlaskit/item';
-import {treeWithTwoBranches, sample} from './packages/mock';
-import {getFirstLeaf, findParentNode} from './utils/tree-search';
 import firebase from './firebase';
-import axios from 'axios';
 import {initialTree, searchTree} from './utils/tree-generation';
 import * as _ from 'lodash';
 import VidVolumeMutedIcon from '@atlaskit/icon/glyph/vid-volume-muted';
 import history from './history';
 import { useLocation } from 'react-router-dom'
-
-const Container = styled.div`
-  display: flex;
-`;
 
 const Dot = styled.span`
   display: flex;
