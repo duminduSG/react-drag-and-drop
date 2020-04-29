@@ -281,6 +281,7 @@ export const buildQuestionViewTree = data => {
             data: {
                 title: question.explanation.concat('-').concat(question.question_id),
                 question: {...question},
+                [findQuestionType(question)]: true
             }
         }
 
@@ -298,4 +299,14 @@ export const buildQuestionViewTree = data => {
     });
 
     return treeTemplate;
+};
+
+const findQuestionType = question => {
+    if(!question.is_custom && !question.question_groups) {
+        return 'isSimplifyaQuestion';
+    } else if(question.is_custom && !question.question_groups) {
+        return 'isCustomQuestionCategoryQuestion';
+    } else if(question.is_custom && question.question_groups) {
+        return 'isQuestionGroupQuestion';
+    }
 }

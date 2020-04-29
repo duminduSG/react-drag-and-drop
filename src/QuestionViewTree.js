@@ -5,6 +5,9 @@ import Tree, {moveItemOnTree, mutateTree} from "@atlaskit/tree";
 import VidVolumeMutedIcon from "@atlaskit/icon/glyph/vid-volume-muted";
 import styled from "styled-components";
 import baseItem, {withItemClick, withItemFocus} from "@atlaskit/item";
+import history from "./history";
+import {getItem} from "@atlaskit/tree/dist/cjs/utils/tree";
+import { useLocation } from "react-router-dom";
 
 const Dot = styled.span`
   display: flex;
@@ -20,8 +23,10 @@ const Item = withItemClick(withItemFocus(baseItem));
 const QuestionViewTree = props => {
 
     const { questionList } = props;
+    let location = useLocation();
     const [rawData, setRawData] = useState(null);
     const [tree, setTree] = useState({});
+    const [selectedNode, setSelectedNode] = useState({});
 
     useEffect(() => {
         if(rawData) {
@@ -37,8 +42,18 @@ const QuestionViewTree = props => {
     }, [questionList]);
 
     useEffect(() => {
-        console.log(tree)
-    }, [tree]);
+        const urlParams = location.pathname.split('/').slice(4);
+        if(!_.isEmpty(tree) && _.isEmpty(selectedNode) && !_.isEmpty(urlParams)) {
+            if(urlParams[2]) {
+                let childQuestionItem = tree.items[urlParams[2]];
+                setSelectedNode(childQuestionItem);
+            } else {
+                let questionItem = tree.items[urlParams[1]];
+                setSelectedNode(questionItem);
+            }
+        }
+
+    }, [location.pathname, tree]);
 
     const renderItem = ({
                             item,
@@ -53,7 +68,11 @@ const QuestionViewTree = props => {
                     isDragging={snapshot.isDragging}
                     elemBefore={<Dot>&bull;</Dot>}
                     dnd={{ dragHandleProps: provided.dragHandleProps }}
-                    onClick={() => {}}
+                    onClick={() => {
+                        setSelectedNode(item);
+                        buildRouteForSelectedItem(item);
+                    }}
+                    isSelected={!!(selectedNode && (item.id === selectedNode.id))}
                 >
                     {item.data ? item.data.title : ''}
                     <> {item.data && item.data.question && item.data.question.muted ? <VidVolumeMutedIcon/> : null}</>
@@ -77,6 +96,29 @@ const QuestionViewTree = props => {
         const newTree = moveItemOnTree(tree, source, destination);
         setTree(newTree);
     };
+
+    const buildRouteForSelectedItem = item => {
+        if(item.data.isSimplifyaQuestion || item.data.isCustomQuestionCategoryQuestion) {
+            let route;
+            if(item.data.question.parent_question_id === '0') {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${item.data.question.category_id}/${item.data.question.question_id}`
+            } else {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${item.data.question.category_id}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
+            }
+            history.push(route);
+
+        } else if(item.data.isQuestionGroupQuestion) {
+            let route;
+            const groups = item.data.question.question_groups;
+            if(item.data.question.parent_question_id === '0') {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${groups[0].question_group_id}/${item.data.question.question_id}`
+            } else {
+                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${groups[0].question_group_id}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
+            }
+            history.push(route);
+        }
+
+    }
 
     return (
         <>
