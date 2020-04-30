@@ -15,9 +15,7 @@ const Container = styled.div`
 
 function App() {
 
-    let location = useLocation();
-    const [tree, setTree] = useState({});
-    const [searchValue, setSearchValue] = useState(null);
+    const [searchValue, setSearchValue] = useState('');
     const [isQuestionView, setIsQuestionView] = useState(true);
     const [questionList, setQuestionList] = useState({});
 
@@ -45,6 +43,7 @@ function App() {
                             .database()
                             .ref(`audit_questions/2000/5ea2948ff937cf001bf800b2`)
                             .on('value', snapshot => {
+                                console.log(snapshot.val())
                                 setQuestionList(snapshot.val());
                             });
 
@@ -59,20 +58,6 @@ function App() {
 
     }, []);
 
-    useEffect(() => {
-        if(searchValue) {
-            setTree(initialTree(filterRawData(questionList)));
-        }
-
-    }, [searchValue]);
-
-    const filterRawData = data => {
-        if(searchValue) {
-            return searchTree(searchValue, data);
-        }
-        return data;
-    };
-
     return (
         <Container>
             <div><input
@@ -85,7 +70,7 @@ function App() {
                 (<span onClick={() => setIsQuestionView(!isQuestionView)}><BitbucketBranchesIcon/></span>)}
             {isQuestionView ?
                 <QuestionViewTree questionList={questionList}/> :
-                <CategoryViewTree questionList={questionList}/>}
+                <CategoryViewTree questionList={questionList} searchValue={searchValue}/>}
         </Container>
     );
 }

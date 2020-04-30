@@ -164,35 +164,32 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
 }
 
 export const searchTree = (searchValue, data) => {
-    const selectedAllQuestions = _.values(data).filter(
+    const questionArray = _.values(data)
+    const selectedAllQuestions = questionArray.filter(
         question =>
             (question.question.toLowerCase().includes(searchValue.toLowerCase()) ||
                 question.explanation.toLowerCase().includes(searchValue.toLowerCase()))
     );
 
+    let selectedQuestionsToBuildTree = [];
+
     const selectedParentQuestions = selectedAllQuestions.filter(question => question.parent_question_id.toString() === '0');
     const selectedChildQuestions = selectedAllQuestions.filter(question => question.parent_question_id.toString() !== '0');
 
-    const selectedParentQuestionsIds = selectedParentQuestions.map(question => question.question_id);
-    const selectedChildQuestionsParentIds = selectedChildQuestions.map(question => question.parent_question_id);
+    selectedQuestionsToBuildTree = [...selectedQuestionsToBuildTree, ...selectedParentQuestions];
 
-    let childQuestionsOfParentQuestions = [];
-    let parentQuestionsOfChildQuestions = [];
+    selectedChildQuestions.forEach(childQuestion => {
 
-    _.values(data).forEach(question => {
-        if(question.parent_question_id.toString() !== '0' && selectedParentQuestionsIds.includes(question.parent_question_id)){
-            childQuestionsOfParentQuestions.push(question)
-        }
-
-        if(question.parent_question_id.toString() === '0' && selectedChildQuestionsParentIds.includes(question.question_id)){
-            parentQuestionsOfChildQuestions.push(question)
+        const matchedParent = questionArray.find(question => question.question_id === childQuestion.parent_question_id &&
+            question.selected_answer_id === childQuestion.question_answer_id
+        );
+        if(matchedParent) {
+            selectedQuestionsToBuildTree = [...selectedQuestionsToBuildTree , childQuestion]
         }
     });
 
-    const uniqQuestions = _.uniqBy([...selectedAllQuestions, ...childQuestionsOfParentQuestions, ...parentQuestionsOfChildQuestions], 'question_id');
-
-    return  _.sortBy(uniqQuestions, ['question_id']);
-
+    const uniqueQuestions = _.uniqBy(selectedQuestionsToBuildTree, 'question_id');
+    return buildSearchTree(uniqueQuestions);
 
 };
 
@@ -309,4 +306,46 @@ const findQuestionType = question => {
     } else if(question.is_custom && question.question_groups) {
         return 'isQuestionGroupQuestion';
     }
+}
+
+const buildSearchTree = data => {
+    let treeTemplate = _.cloneDeep(treeTemplateMock);
+    const uniqueCategories = _.sortBy(getUniqueCategories(data), 'category_order');
+
+    uniqueCategories.map(category => {
+        const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !item.is_custom && !item.question_groups ), 'question_order');
+        treeTemplate.items['1'].children.push(category.category_id.toString());
+        treeTemplate.items[category.category_id] = {
+            id: category.category_id.toString(),
+            children: categoryQuestions.map(item => item.question_id),
+            hasChildren: true,
+            isExpanded: false,
+            isChildrenLoading: false,
+            data: {
+                title: category.category_name.concat('-').concat(category.category_id),
+                isSimplifyaCategory: true
+            }
+        };
+
+        categoryQuestions.map(question => {
+
+            treeTemplate.items[question.question_id] = {
+                id: question.question_id.toString(),
+                children: [],
+                hasChildren: false,
+                isExpanded: true,
+                isChildrenLoading: false,
+                data: {
+                    title: question.explanation.concat('-').concat(question.question_id),
+                    question: {...question},
+                    isSimplifyaQuestion: true
+                }
+            }
+
+        });
+
+    });
+
+    return treeTemplate;
+
 }

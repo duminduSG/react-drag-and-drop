@@ -71,31 +71,28 @@ const createQuestionGroupQuestionOrder = flattenedTree => {
 
 const CategoryViewTree = props => {
 
-    const { questionList } = props;
+    const { questionList, searchValue } = props;
     let location = useLocation();
     const [tree, setTree] = useState({});
     const [rawData, setRawData] = useState(null);
     const [selectedNode, setSelectedNode] = useState({});
 
     useEffect(() => {
-        if(rawData) {
-            setTree(initialTree(rawData));
-        }
-
-    }, [rawData]);
-
-    useEffect(() => {
         if (!_.isEmpty(questionList)) {
-            setRawData(questionList);
+            if (searchValue !== '') {
+                setTree(searchTree(searchValue, questionList));
+
+            } else {
+                setTree(initialTree(questionList));
+            }
         }
-    }, [questionList]);
+    }, [questionList, searchValue]);
 
 
     useEffect(() => {
         const urlParams = location.pathname.split('/').slice(4);
         if(!_.isEmpty(tree) && _.isEmpty(selectedNode) && !_.isEmpty(urlParams)) {
             const categoryOrGroupItem = tree.items[urlParams[0]];
-            console.log(categoryOrGroupItem.id)
             let questionItem;
             if(categoryOrGroupItem.children.includes(urlParams[1])) {
                 questionItem = tree.items[urlParams[1]];
@@ -124,10 +121,6 @@ const CategoryViewTree = props => {
         }
 
     }, [location.pathname, tree]);
-
-    useEffect(() => {
-        console.log(selectedNode)
-    }, [selectedNode])
 
     useEffect(() => {
         if(!_.isEmpty(tree)) {
