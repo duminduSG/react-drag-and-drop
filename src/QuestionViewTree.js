@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import { buildQuestionViewTree } from "./utils/tree-generation";
+import {buildQuestionViewTree, searchTree} from "./utils/tree-generation";
 import * as _ from "lodash";
 import Tree, {moveItemOnTree, mutateTree} from "@atlaskit/tree";
 import VidVolumeMutedIcon from "@atlaskit/icon/glyph/vid-volume-muted";
@@ -22,24 +22,22 @@ const Item = withItemClick(withItemFocus(baseItem));
 
 const QuestionViewTree = props => {
 
-    const { questionList } = props;
+    const { questionList, searchValue } = props;
     let location = useLocation();
     const [rawData, setRawData] = useState(null);
     const [tree, setTree] = useState({});
     const [selectedNode, setSelectedNode] = useState({});
 
     useEffect(() => {
-        if(rawData) {
-            setTree(buildQuestionViewTree(rawData));
-        }
-
-    }, [rawData]);
-
-    useEffect(() => {
         if (!_.isEmpty(questionList)) {
-            setRawData(questionList);
+            if (searchValue !== '') {
+                setTree(searchTree(searchValue, questionList, false));
+
+            } else {
+                //setTree(buildQuestionViewTree(questionList));
+            }
         }
-    }, [questionList]);
+    }, [questionList, searchValue]);
 
     useEffect(() => {
         const urlParams = location.pathname.split('/').slice(4);

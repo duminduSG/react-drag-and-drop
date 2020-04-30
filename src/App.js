@@ -16,7 +16,7 @@ const Container = styled.div`
 function App() {
 
     const [searchValue, setSearchValue] = useState('');
-    const [isQuestionView, setIsQuestionView] = useState(true);
+    const [isQuestionView, setIsQuestionView] = useState(false);
     const [questionList, setQuestionList] = useState({});
 
     useEffect(() => {
@@ -43,7 +43,7 @@ function App() {
                             .database()
                             .ref(`audit_questions/2000/5ea2948ff937cf001bf800b2`)
                             .on('value', snapshot => {
-                                console.log(snapshot.val())
+                                //console.log(snapshot.val())
                                 setQuestionList(snapshot.val());
                             });
 
@@ -69,7 +69,7 @@ function App() {
                 (<span onClick={() => setIsQuestionView(!isQuestionView)}><EditorBulletListIcon/></span>) :
                 (<span onClick={() => setIsQuestionView(!isQuestionView)}><BitbucketBranchesIcon/></span>)}
             {isQuestionView ?
-                <QuestionViewTree questionList={questionList}/> :
+                <QuestionViewTree questionList={questionList} searchValue={searchValue}/> :
                 <CategoryViewTree questionList={questionList} searchValue={searchValue}/>}
         </Container>
     );

@@ -80,10 +80,10 @@ const CategoryViewTree = props => {
     useEffect(() => {
         if (!_.isEmpty(questionList)) {
             if (searchValue !== '') {
-                setTree(searchTree(searchValue, questionList));
+                setTree(searchTree(searchValue, questionList, true));
 
             } else {
-                setTree(initialTree(questionList));
+                //setTree(initialTree(questionList));
             }
         }
     }, [questionList, searchValue]);
@@ -91,7 +91,7 @@ const CategoryViewTree = props => {
 
     useEffect(() => {
         const urlParams = location.pathname.split('/').slice(4);
-        if(!_.isEmpty(tree) && _.isEmpty(selectedNode) && !_.isEmpty(urlParams)) {
+        if(!_.isEmpty(tree) && searchValue === '' && _.isEmpty(selectedNode) && !_.isEmpty(urlParams)) {
             const categoryOrGroupItem = tree.items[urlParams[0]];
             let questionItem;
             if(categoryOrGroupItem.children.includes(urlParams[1])) {
@@ -112,7 +112,7 @@ const CategoryViewTree = props => {
             }
             setTree(mutateTree(tree, categoryOrGroupItem.id, { isExpanded: true }));
 
-        } else if(!_.isEmpty(tree) && _.isEmpty(selectedNode) && _.isEmpty(urlParams)) {
+        } else if(!_.isEmpty(tree) && searchValue === '' && _.isEmpty(selectedNode) && _.isEmpty(urlParams)) {
             const firstItemToSelect = getItem(tree, [0,0]);
             const firstItemCategoryOrGroup = getItem(tree, [0]);
             setSelectedNode(firstItemToSelect);

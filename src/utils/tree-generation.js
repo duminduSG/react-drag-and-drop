@@ -46,6 +46,58 @@ const getQuestionGroups = data => {
     return _.uniqBy(questionGroups, 'question_group_id');
 }
 
+const addSimplifyaQuestionToTree = (treeTemplate, data, simplifyaCategories) => {
+
+    simplifyaCategories.map(category => {
+        const simplifyaQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !item.is_custom && !item.question_groups ), 'question_order');
+        treeTemplate.items['1'].children.push(category.category_id.toString());
+        treeTemplate.items[category.category_id] = {
+            id: category.category_id.toString(),
+            children: simplifyaQuestions.filter(item => item.parent_question_id.toString() === '0').map(item => item.question_id),
+            hasChildren: true,
+            isExpanded: false,
+            isChildrenLoading: false,
+            data: {
+                title: category.category_name.concat('-').concat(category.category_id),
+                isSimplifyaCategory: true
+            }
+        };
+
+        simplifyaQuestions.map(question => {
+
+            treeTemplate.items[question.question_id] = {
+                id: question.question_id.toString(),
+                children: [],
+                hasChildren: false,
+                isExpanded: true,
+                isChildrenLoading: false,
+                data: {
+                    title: question.explanation.concat('-').concat(question.question_id),
+                    question: {...question},
+                    isSimplifyaQuestion: true
+                }
+            }
+        });
+
+        simplifyaQuestions.map(question => {
+
+            if(question.parent_question_id.toString() !== '0') {
+
+                if(treeTemplate.items[question.parent_question_id] &&
+                    treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
+
+                    treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
+                    treeTemplate.items[question.parent_question_id].hasChildren = true;
+                }
+
+            }
+
+        });
+
+    });
+
+}
+
 const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) => {
     customCategories.forEach(category => {
         const customCategoryQuestions = _.sortBy(_.values(data).filter(question => question.is_custom && !question.question_groups && question.category_id === category.category_id), 'question_order');
@@ -65,6 +117,22 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
 
         customCategoryQuestions.map(question => {
 
+            treeTemplate.items[question.question_id] = {
+                id: question.question_id.toString(),
+                children: [],
+                hasChildren: false,
+                isExpanded: true,
+                isChildrenLoading: false,
+                data: {
+                    title: question.explanation.concat('-').concat(question.question_id),
+                    question: {...question},
+                    isCustomQuestionCategoryQuestion: true
+                }
+            }
+        });
+
+
+        customCategoryQuestions.map(question => {
 
             treeTemplate.items[question.question_id] = {
                 id: question.question_id.toString(),
@@ -78,19 +146,6 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
                     isCustomQuestionCategoryQuestion: true
                 }
             }
-
-
-            if(question.parent_question_id.toString() !== '0') {
-
-                if(treeTemplate.items[question.parent_question_id] &&
-                    treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
-
-                    treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
-                    treeTemplate.items[question.parent_question_id].hasChildren = true;
-                }
-
-            }
-
         });
 
 
@@ -144,6 +199,9 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
                 }
             }
 
+        });
+
+        questionGroupQuestionsByCategory.map(question => {
 
             if(question.parent_question_id.toString() !== '0') {
 
@@ -158,12 +216,12 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
 
         });
 
-        //console.log(questionGroupQuestionsByCategory)
+
     });
 
 }
 
-export const searchTree = (searchValue, data) => {
+export const searchTree = (searchValue, data, isCategoryView) => {
     const questionArray = _.values(data)
     const selectedAllQuestions = questionArray.filter(
         question =>
@@ -189,63 +247,19 @@ export const searchTree = (searchValue, data) => {
     });
 
     const uniqueQuestions = _.uniqBy(selectedQuestionsToBuildTree, 'question_id');
-    return buildSearchTree(uniqueQuestions);
+    return isCategoryView ? buildSearchTreeForCategoryView(uniqueQuestions) : buildSearchTreeForQuestionView(uniqueQuestions);
 
 };
 
 export const initialTree = data => {
     let treeTemplate = _.cloneDeep(treeTemplateMock);
-    const uniqueCategories = _.sortBy(getUniqueCategories(data), 'category_order');
+    const simplifyaCategories = _.sortBy(getUniqueCategories(data), 'category_order');
     const customCategories = _.sortBy(getCustomCategories(data), 'category_order');
     const questionGroups = _.sortBy(getQuestionGroups(data), 'group_order');
 
-    uniqueCategories.map(category => {
-        //console.log(category)
-        const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !item.is_custom && !item.question_groups ), 'question_order');
-        treeTemplate.items['1'].children.push(category.category_id.toString());
-        treeTemplate.items[category.category_id] = {
-            id: category.category_id.toString(),
-            children: categoryQuestions.filter(item => item.parent_question_id.toString() === '0').map(item => item.question_id),
-            hasChildren: true,
-            isExpanded: false,
-            isChildrenLoading: false,
-            data: {
-                title: category.category_name.concat('-').concat(category.category_id),
-                isSimplifyaCategory: true
-            }
-        };
-
-        categoryQuestions.map(question => {
-
-
-            treeTemplate.items[question.question_id] = {
-                id: question.question_id.toString(),
-                children: [],
-                hasChildren: false,
-                isExpanded: true,
-                isChildrenLoading: false,
-                data: {
-                    title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
-                    isSimplifyaQuestion: true
-                }
-            }
-
-
-            if(question.parent_question_id.toString() !== '0') {
-
-                if(treeTemplate.items[question.parent_question_id] &&
-                    treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
-
-                    treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
-                    treeTemplate.items[question.parent_question_id].hasChildren = true;
-                }
-
-            }
-
-        });
-
-    });
+    if(simplifyaCategories.length > 0) {
+        addSimplifyaQuestionToTree(treeTemplate, data, simplifyaCategories);
+    }
 
     if(customCategories.length > 0) {
         addCustomCategoryQuestionsToTree(treeTemplate, data, customCategories);
@@ -308,16 +322,14 @@ const findQuestionType = question => {
     }
 }
 
-const buildSearchTree = data => {
-    let treeTemplate = _.cloneDeep(treeTemplateMock);
-    const uniqueCategories = _.sortBy(getUniqueCategories(data), 'category_order');
+const addSimplifyaQuestionsToSearch = (treeTemplate, data, simplifyaCategories) => {
 
-    uniqueCategories.map(category => {
-        const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !item.is_custom && !item.question_groups ), 'question_order');
+    simplifyaCategories.forEach(category => {
+        const simplifyaQuestions = _.sortBy(_.values(data).filter(item => item.category_id === category.category_id && !item.is_custom && !item.question_groups ), 'question_order');
         treeTemplate.items['1'].children.push(category.category_id.toString());
         treeTemplate.items[category.category_id] = {
             id: category.category_id.toString(),
-            children: categoryQuestions.map(item => item.question_id),
+            children: simplifyaQuestions.map(item => item.question_id),
             hasChildren: true,
             isExpanded: false,
             isChildrenLoading: false,
@@ -327,7 +339,7 @@ const buildSearchTree = data => {
             }
         };
 
-        categoryQuestions.map(question => {
+        simplifyaQuestions.forEach(question => {
 
             treeTemplate.items[question.question_id] = {
                 id: question.question_id.toString(),
@@ -344,6 +356,133 @@ const buildSearchTree = data => {
 
         });
 
+    });
+}
+
+const addCustomQuestionsToSearch = (treeTemplate, data, customCategories) => {
+
+    customCategories.forEach(category => {
+        const customCategoryQuestions = _.sortBy(_.values(data).filter(question => question.is_custom && !question.question_groups && question.category_id === category.category_id), 'question_order');
+
+        treeTemplate.items['1'].children.push(category.category_id.toString());
+        treeTemplate.items[category.category_id] = {
+            id: category.category_id.toString(),
+            children: customCategoryQuestions.map(item => item.question_id),
+            hasChildren: true,
+            isExpanded: false,
+            isChildrenLoading: false,
+            data: {
+                title: category.category_name.concat('-').concat(category.category_id).concat('-custom'),
+                isCustomQuestionCategory: true
+            }
+        };
+
+        customCategoryQuestions.forEach(question => {
+
+            treeTemplate.items[question.question_id] = {
+                id: question.question_id.toString(),
+                children: [],
+                hasChildren: false,
+                isExpanded: true,
+                isChildrenLoading: false,
+                data: {
+                    title: question.explanation.concat('-').concat(question.question_id),
+                    question: {...question},
+                    isCustomQuestionCategoryQuestion: true
+                }
+            }
+        });
+
+
+    });
+}
+
+const addQuestionGroupQuestionsToSearch = (treeTemplate, data, questionGroups) => {
+    const questionGroupQuestions = _.values(data).filter(question => question.is_custom && question.question_groups);
+    questionGroups.forEach(group => {
+        let questionGroupQuestionsByCategory = [];
+        questionGroupQuestions.forEach(question => {
+            if(question.question_groups.some(questionGroup => questionGroup.question_group_id === group.question_group_id)) {
+                questionGroupQuestionsByCategory = [ ...questionGroupQuestionsByCategory , question];
+            }
+        });
+
+        questionGroupQuestionsByCategory = _.sortBy(questionGroupQuestionsByCategory, `question_order_in_group_${group.question_group_id}`);
+
+        treeTemplate.items['1'].children.push(group.question_group_id.toString());
+        treeTemplate.items[group.question_group_id] = {
+            id: group.question_group_id.toString(),
+            children: questionGroupQuestionsByCategory.filter(item => item.parent_question_id.toString() === '0').map(item => `${item.question_id}_group_${group.question_group_id}`),
+            hasChildren: true,
+            isExpanded: false,
+            isChildrenLoading: false,
+            data: {
+                title: group.question_group_name.concat('-').concat(group.question_group_id),
+                isQuestionGroup: true
+            }
+        };
+
+        questionGroupQuestionsByCategory.map(question => {
+
+
+            treeTemplate.items[`${question.question_id}_group_${group.question_group_id}`] = {
+                id: `${question.question_id.toString()}_group_${group.question_group_id}`,
+                children: [],
+                hasChildren: false,
+                isExpanded: true,
+                isChildrenLoading: false,
+                data: {
+                    title: question.explanation.concat('-').concat(question.question_id),
+                    question: {...question},
+                    isQuestionGroupQuestion: true
+                }
+            }
+
+        });
+
+    });
+
+}
+
+const buildSearchTreeForCategoryView = data => {
+    let treeTemplate = _.cloneDeep(treeTemplateMock);
+    const simplifyaCategories = _.sortBy(getUniqueCategories(data), 'category_order');
+    const customCategories = _.sortBy(getCustomCategories(data), 'category_order');
+    const questionGroups = _.sortBy(getQuestionGroups(data), 'group_order');
+
+    if(simplifyaCategories.length > 0) {
+        addSimplifyaQuestionsToSearch(treeTemplate, data, simplifyaCategories);
+    }
+
+    if(customCategories.length > 0) {
+        addCustomQuestionsToSearch(treeTemplate, data, customCategories);
+    }
+
+    if(questionGroups.length > 0) {
+        addQuestionGroupQuestionsToSearch(treeTemplate, data, questionGroups);
+    }
+
+    return treeTemplate;
+
+}
+
+const buildSearchTreeForQuestionView = questions => {
+    let treeTemplate = _.cloneDeep(treeTemplateMock);
+    treeTemplate.items['1'].children = questions.map(question => question.question_id);
+
+    questions.map(question => {
+        treeTemplate.items[question.question_id] = {
+            id: question.question_id.toString(),
+            children: [],
+            hasChildren: false,
+            isExpanded: true,
+            isChildrenLoading: false,
+            data: {
+                title: question.explanation.concat('-').concat(question.question_id),
+                question: {...question},
+                [findQuestionType(question)]: true
+            }
+        }
     });
 
     return treeTemplate;
