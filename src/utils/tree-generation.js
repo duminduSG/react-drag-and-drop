@@ -1,6 +1,9 @@
 import * as _ from 'lodash';
 import question from "@atlaskit/icon/glyph/question";
 
+const PARENT_NODE_TYPE_CATEGORY = 'category';
+const PARENT_NODE_TYPE_GROUP = 'group';
+
 let treeTemplateMock = {
     rootId: '1',
     items: {
@@ -253,25 +256,138 @@ export const searchTree = (searchValue, data, isCategoryView) => {
 
 };
 
-export const initialTree = data => {
+export const initialTree = (audit, data) => {
+    console.log(Math.random() );
     let treeTemplate = _.cloneDeep(treeTemplateMock);
-    const simplifyaCategories = _.sortBy(getUniqueCategories(data), 'category_order');
-    const customCategories = _.sortBy(getCustomCategories(data), 'category_order');
-    const questionGroups = _.sortBy(getQuestionGroups(data), 'group_order');
+    const parentNodes = _.sortBy(audit.parent_question_nodes, 'node_order');
+    const questionGroupQuestions = _.values(data).filter(question => question.is_custom && question.question_groups);
 
-    if(simplifyaCategories.length > 0) {
-        addSimplifyaQuestionToTree(treeTemplate, data, simplifyaCategories);
-    }
+    parentNodes.forEach(node => {
 
-    if(customCategories.length > 0) {
-        addCustomCategoryQuestionsToTree(treeTemplate, data, customCategories);
-    }
+        if(node.node_type === PARENT_NODE_TYPE_CATEGORY) {
 
-    if(questionGroups.length > 0) {
-        addQuestionGroupQuestionsToTree(treeTemplate, data, questionGroups);
-    }
+            const categoryQuestions = _.sortBy(_.values(data).filter(item => item.category_id === node.id && !item.question_groups), 'question_order');
+
+            if(categoryQuestions.length > 0) {
+                treeTemplate.items['1'].children.push(node.id.toString());
+                treeTemplate.items[node.id.toString()] = {
+                    id: node.id.toString(),
+                    children: categoryQuestions.filter(item => item.parent_question_id.toString() === '0').map(item => item.question_id),
+                    hasChildren: true,
+                    isExpanded: false,
+                    isChildrenLoading: false,
+                    data: {
+                        title: node.name,
+                        isCategory: true
+                    }
+                };
+
+                categoryQuestions.map(question => {
+
+                    let { citations, city, company_id, is_duplicate_from ,licenses, state, ...rest } =question;
+
+                    treeTemplate.items[question.question_id] = {
+                        id: question.question_id.toString(),
+                        children: [],
+                        hasChildren: false,
+                        isExpanded: true,
+                        isChildrenLoading: false,
+                        data: {
+                            title: question.explanation,
+                            question: rest,
+                            [findQuestionType(question)]: true
+                        }
+                    }
+                });
+
+                categoryQuestions.map(question => {
+
+                    if(question.parent_question_id.toString() !== '0') {
+
+                        if(treeTemplate.items[question.parent_question_id] &&
+                            treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
+
+                            treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
+                            treeTemplate.items[question.parent_question_id].hasChildren = true;
+                        }
+
+                    }
+
+                });
+            }
 
 
+        }
+
+        if(node.node_type === PARENT_NODE_TYPE_GROUP) {
+
+            //console.log(node)
+
+            let questionGroupQuestionsByCategory = [];
+            questionGroupQuestions.forEach(question => {
+                if(question.question_groups.some(questionGroup => questionGroup.question_group_id === node.id)) {
+                    questionGroupQuestionsByCategory = [ ...questionGroupQuestionsByCategory , question];
+                }
+            });
+
+            questionGroupQuestionsByCategory = _.sortBy(questionGroupQuestionsByCategory, `question_order_in_group_${node.id}`);
+
+            if(questionGroupQuestionsByCategory.length > 0) {
+
+                treeTemplate.items['1'].children.push(node.id.toString());
+                treeTemplate.items[node.id.toString()] = {
+                    id: node.id.toString(),
+                    children: questionGroupQuestionsByCategory.filter(item => item.parent_question_id.toString() === '0').map(item => `${item.question_id}_group_${node.id}`),
+                    hasChildren: true,
+                    isExpanded: false,
+                    isChildrenLoading: false,
+                    data: {
+                        title: node.name,
+                        isGroup: true
+                    }
+                };
+
+                questionGroupQuestionsByCategory.map(question => {
+
+                    let { citations, city, company_id, is_duplicate_from ,licenses, state, ...rest } =question;
+
+                    treeTemplate.items[`${question.question_id}_group_${node.id}`] = {
+                        id: `${question.question_id.toString()}_group_${node.id}`,
+                        children: [],
+                        hasChildren: false,
+                        isExpanded: true,
+                        isChildrenLoading: false,
+                        data: {
+                            title: question.explanation,
+                            question: rest,
+                            isQuestionGroupQuestion: true
+                        }
+                    }
+
+                });
+
+                questionGroupQuestionsByCategory.map(question => {
+
+                    if(question.parent_question_id.toString() !== '0') {
+
+                        if(treeTemplate.items[`${question.parent_question_id}_group_${node.id}`] &&
+                            treeTemplate.items[`${question.parent_question_id}_group_${node.id}`].data.question.selected_answer_id === question.question_answer_id) {
+
+                            treeTemplate.items[`${question.parent_question_id}_group_${node.id}`].children.push(`${question.question_id}_group_${node.id}`);
+                            treeTemplate.items[`${question.parent_question_id}_group_${node.id}`].hasChildren = true;
+                        }
+
+                    }
+
+                });
+
+            }
+
+        }
+
+    })
+
+    console.log(treeTemplate)
 
     return treeTemplate;
 };

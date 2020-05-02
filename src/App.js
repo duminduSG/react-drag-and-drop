@@ -18,6 +18,7 @@ function App() {
     const [searchValue, setSearchValue] = useState('');
     const [isQuestionView, setIsQuestionView] = useState(false);
     const [questionList, setQuestionList] = useState({});
+    const [audit, setAudit] = useState({});
 
     useEffect(() => {
 
@@ -33,15 +34,15 @@ function App() {
                     .then(data => {
 
                         firebase.database()
-                            .ref(`audits/2000/5ea2948ff937cf001bf800b2`)
-                            .once('value')
-                            .then(snapshot => {
-                                //console.log(snapshot.val());
+                            .ref(`audits/2085/5ea7f3c1d56721001b64f4ce`)
+                            .on('value', snapshot => {
+                                console.log(snapshot.val());
+                                setAudit(snapshot.val());
                             });
 
                         firebase
                             .database()
-                            .ref(`audit_questions/2000/5ea2948ff937cf001bf800b2`)
+                            .ref(`audit_questions/2085/5ea7f3c1d56721001b64f4ce`)
                             .on('value', snapshot => {
                                 //console.log(snapshot.val())
                                 setQuestionList(snapshot.val());
@@ -70,7 +71,7 @@ function App() {
                 (<span onClick={() => setIsQuestionView(!isQuestionView)}><BitbucketBranchesIcon/></span>)}
             {isQuestionView ?
                 <QuestionViewTree questionList={questionList} searchValue={searchValue}/> :
-                <CategoryViewTree questionList={questionList} searchValue={searchValue}/>}
+                <CategoryViewTree audit={audit} questionList={questionList} searchValue={searchValue}/>}
         </Container>
     );
 }

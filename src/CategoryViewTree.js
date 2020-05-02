@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import styled from 'styled-components';
 import ChevronDownIcon from '@atlaskit/icon/glyph/chevron-down';
 import ChevronRightIcon from '@atlaskit/icon/glyph/chevron-right';
@@ -28,18 +28,20 @@ const Dot = styled.span`
 const Item = withItemClick(withItemFocus(baseItem));
 
 const createCategoryQuestionOrder = flattenedTree => {
-    const categories = flattenedTree.filter(item => item.item.data.isSimplifyaCategory || item.item.data.isCustomQuestionCategory).map((category, index) => {
-        return {category_id: category.item.id, index}
+    const parentNodes = flattenedTree.filter(item => item.item.data.isCategory || item.item.data.isGroup).map((category, index) => {
+        return {id: category.item.id, index}
     })
     const questions = flattenedTree.filter(item => item.item.data.question && (item.item.data.isSimplifyaQuestion || item.item.data.isCustomQuestionCategoryQuestion) && item.item.data.question.parent_question_id.toString() === '0');
     return  questions.map((question, index) => {
-        const categoryOrder = categories.filter(category => category.category_id === question.item.data.question.category_id.toString())
-        return {...question.item.data.question, question_order: index + 1, category_order: categoryOrder[0].index}
+        const selectedParentNode = parentNodes.find(node => node.id === question.item.data.question.category_id.toString())
+        if(selectedParentNode) {
+            return {...question.item.data.question, question_order: index + 1, category_order: selectedParentNode.index}
+        }
     })
 }
 
 const createQuestionGroupQuestionOrder = flattenedTree => {
-    const questionGroups = flattenedTree.filter(item => item.item.data.isQuestionGroup).map((questionGroup, index) => {
+    const questionGroups = flattenedTree.filter(item => item.item.data.isGroup).map((questionGroup, index) => {
         return {question_group_id: questionGroup.item.id, children: questionGroup.item.children, index}
     });
 
@@ -64,32 +66,31 @@ const createQuestionGroupQuestionOrder = flattenedTree => {
 
         })
     })
-    //console.log(mapQuestions)
     return mapQuestions;
 
 }
 
 const CategoryViewTree = props => {
 
-    const { questionList, searchValue } = props;
+    const { audit, questionList, searchValue } = props;
     let location = useLocation();
     const [tree, setTree] = useState({});
     const [rawData, setRawData] = useState(null);
     const [selectedNode, setSelectedNode] = useState({});
 
     useEffect(() => {
-        if (!_.isEmpty(questionList)) {
+        if (!_.isEmpty(questionList) && !_.isEmpty(audit)) {
             if (searchValue !== '') {
                 setTree(searchTree(searchValue, questionList, true));
 
             } else {
-                setTree(initialTree(questionList));
+                setTree(initialTree(audit, questionList));
             }
         }
-    }, [questionList, searchValue]);
+    }, [questionList, searchValue, audit]);
 
 
-    useEffect(() => {
+    /*useEffect(() => {
         const urlParams = location.pathname.split('/').slice(4);
         if(!_.isEmpty(tree) && searchValue === '' && _.isEmpty(selectedNode) && !_.isEmpty(urlParams)) {
             const categoryOrGroupItem = tree.items[urlParams[0]];
@@ -120,7 +121,7 @@ const CategoryViewTree = props => {
             buildRouteForSelectedItem(firstItemToSelect);
         }
 
-    }, [location.pathname, tree]);
+    }, [location.pathname, tree]);*/
 
     useEffect(() => {
         if(!_.isEmpty(tree)) {
@@ -136,30 +137,41 @@ const CategoryViewTree = props => {
             }
 
             const flattenedTree = flattenTree(alteredTree);
-            //console.log(flattenedTree)
+
+            const parentNodes = flattenedTree.filter(item => item.item.data.isCategory || item.item.data.isGroup).map((node, index) => {
+                return {
+                    id: !isNaN(node.item.id) ? parseInt(node.item.id) : node.item.id,
+                    name: node.item.data.title,
+                    node_type: node.item.data.isCategory ? 'category' : 'group',
+                    node_order: index + 1}
+            })
+
+            let updates = {}
+            updates['audits/2085/5ea7f3c1d56721001b64f4ce/parent_question_nodes'] = parentNodes;
+
             const orderedCategoryQuestions = createCategoryQuestionOrder(flattenedTree);
             const orderedGroupQuestions = createQuestionGroupQuestionOrder(flattenedTree);
 
-            let updates = {}
+
             orderedCategoryQuestions.forEach(question => {
-                updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/question_order'] = question.question_order;
-                updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/category_order'] = question.category_order;
+                updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/question_order'] = question.question_order;
+                updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/category_order'] = question.category_order;
             });
 
             orderedGroupQuestions.forEach(question => {
-                updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/question_groups'] = question.question_groups;
+                updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/question_groups'] = question.question_groups;
                 question.question_groups.forEach(group => {
-                    updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/group_order_' + group.question_group_id] = group.group_order;
-                    updates['audit_questions/2000/5ea2948ff937cf001bf800b2/' + question.question_id + '/question_order_in_group_' + group.question_group_id] = group.question_order_in_group;
+                    updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/group_order_' + group.question_group_id] = group.group_order;
+                    updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/question_order_in_group_' + group.question_group_id] = group.question_order_in_group;
                 })
 
             });
 
-            /*const ref = firebase
+            const ref = firebase
                 .app()
                 .database()
                 .ref();
-            ref.update(updates);*/
+            ref.update(updates);
 
         }
 
@@ -169,9 +181,9 @@ const CategoryViewTree = props => {
         if(item.data.isSimplifyaQuestion || item.data.isCustomQuestionCategoryQuestion) {
             let route;
             if(item.data.question.parent_question_id === '0') {
-                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${item.data.question.category_id}/${item.data.question.question_id}`
+                route = `/audit/conduct/5ea7f3c1d56721001b64f4ce/${item.data.question.category_id}/${item.data.question.question_id}`
             } else {
-                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${item.data.question.category_id}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
+                route = `/audit/conduct/5ea7f3c1d56721001b64f4ce/${item.data.question.category_id}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
             }
             history.push(route);
 
@@ -179,9 +191,9 @@ const CategoryViewTree = props => {
             let route;
             const idInfo = item.id.split('_');
             if(item.data.question.parent_question_id === '0') {
-                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${idInfo[2]}/${item.data.question.question_id}`
+                route = `/audit/conduct/5ea7f3c1d56721001b64f4ce/${idInfo[2]}/${item.data.question.question_id}`
             } else {
-                route = `/audit/conduct/5ea2948ff937cf001bf800b2/${idInfo[2]}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
+                route = `/audit/conduct/5ea7f3c1d56721001b64f4ce/${idInfo[2]}/${item.data.question.parent_question_id}/${item.data.question.question_id}`
             }
             history.push(route);
         }
@@ -190,7 +202,7 @@ const CategoryViewTree = props => {
 
     const getIcon = (item, onExpand, onCollapse) => {
         if (item.children && item.children.length > 0 &&
-            (item.data.isSimplifyaCategory || item.data.isCustomQuestionCategory || item.data.isQuestionGroup)) {
+            (item.data.isCategory || item.data.isGroup)) {
             return item.isExpanded ? (
                 <Button
                     spacing="none"
@@ -238,7 +250,7 @@ const CategoryViewTree = props => {
                     }}
                     isSelected={!!(selectedNode && (item.id === selectedNode.id))}
                 >
-                    {item.data ? item.data.title : ''}
+                    {item.data ? item.data.title.concat('-').concat(item.id) : ''}
                     <> {item.data && item.data.question && item.data.question.muted ? <VidVolumeMutedIcon/> : null}</>
                 </Item>
             </div>
