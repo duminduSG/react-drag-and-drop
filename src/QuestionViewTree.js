@@ -34,7 +34,7 @@ const QuestionViewTree = props => {
                 setTree(searchTree(searchValue, questionList, false));
 
             } else {
-                //setTree(buildQuestionViewTree(questionList));
+                setTree(buildQuestionViewTree(questionList));
             }
         }
     }, [questionList, searchValue]);

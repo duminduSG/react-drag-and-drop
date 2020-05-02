@@ -65,6 +65,8 @@ const addSimplifyaQuestionToTree = (treeTemplate, data, simplifyaCategories) => 
 
         simplifyaQuestions.map(question => {
 
+            let { citations, city, company_id, is_duplicate_from ,licenses, state, ...rest } =question;
+
             treeTemplate.items[question.question_id] = {
                 id: question.question_id.toString(),
                 children: [],
@@ -73,7 +75,7 @@ const addSimplifyaQuestionToTree = (treeTemplate, data, simplifyaCategories) => 
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
+                    question: rest,
                     isSimplifyaQuestion: true
                 }
             }
@@ -117,6 +119,8 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
 
         customCategoryQuestions.map(question => {
 
+            let { citations, city, company_id, is_duplicate_from ,licenses, state,  ...rest } = question;
+
             treeTemplate.items[question.question_id] = {
                 id: question.question_id.toString(),
                 children: [],
@@ -125,7 +129,7 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
+                    question: rest,
                     isCustomQuestionCategoryQuestion: true
                 }
             }
@@ -134,16 +138,13 @@ const addCustomCategoryQuestionsToTree = (treeTemplate, data, customCategories) 
 
         customCategoryQuestions.map(question => {
 
-            treeTemplate.items[question.question_id] = {
-                id: question.question_id.toString(),
-                children: [],
-                hasChildren: false,
-                isExpanded: true,
-                isChildrenLoading: false,
-                data: {
-                    title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
-                    isCustomQuestionCategoryQuestion: true
+            if(question.parent_question_id.toString() !== '0') {
+
+                if(treeTemplate.items[question.parent_question_id] &&
+                    treeTemplate.items[question.parent_question_id].data.question.selected_answer_id === question.question_answer_id) {
+
+                    treeTemplate.items[question.parent_question_id].children.push(question.question_id.toString());
+                    treeTemplate.items[question.parent_question_id].hasChildren = true;
                 }
             }
         });
@@ -185,6 +186,7 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
 
         questionGroupQuestionsByCategory.map(question => {
 
+            let { citations, city, company_id, is_duplicate_from ,licenses, state, ...rest } =question;
 
             treeTemplate.items[`${question.question_id}_group_${group.question_group_id}`] = {
                 id: `${question.question_id.toString()}_group_${group.question_group_id}`,
@@ -194,7 +196,7 @@ const addQuestionGroupQuestionsToTree = (treeTemplate, data, questionGroups) => 
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
+                    question: rest,
                     isQuestionGroupQuestion: true
                 }
             }
@@ -283,6 +285,8 @@ export const buildQuestionViewTree = data => {
 
     questions.map(question => {
 
+        let { citations, city, company_id, is_duplicate_from ,licenses, state,  ...rest } =question;
+
         treeTemplate.items[question.question_id] = {
             id: question.question_id.toString(),
             children: [],
@@ -291,11 +295,14 @@ export const buildQuestionViewTree = data => {
             isChildrenLoading: false,
             data: {
                 title: question.explanation.concat('-').concat(question.question_id),
-                question: {...question},
+                question: rest,
                 [findQuestionType(question)]: true
             }
         }
 
+    });
+
+    questions.map(question => {
         if(question.parent_question_id.toString() !== '0') {
 
             if(treeTemplate.items[question.parent_question_id] &&
@@ -341,6 +348,8 @@ const addSimplifyaQuestionsToSearch = (treeTemplate, data, simplifyaCategories) 
 
         simplifyaQuestions.forEach(question => {
 
+            let { citations, city, company_id, is_duplicate_from ,licenses, state,  ...rest } = question;
+
             treeTemplate.items[question.question_id] = {
                 id: question.question_id.toString(),
                 children: [],
@@ -349,7 +358,7 @@ const addSimplifyaQuestionsToSearch = (treeTemplate, data, simplifyaCategories) 
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
+                    question: rest,
                     isSimplifyaQuestion: true
                 }
             }
@@ -378,7 +387,7 @@ const addCustomQuestionsToSearch = (treeTemplate, data, customCategories) => {
         };
 
         customCategoryQuestions.forEach(question => {
-
+            let { citations, city, company_id, is_duplicate_from ,licenses, state,  ...rest } = question;
             treeTemplate.items[question.question_id] = {
                 id: question.question_id.toString(),
                 children: [],
@@ -387,7 +396,7 @@ const addCustomQuestionsToSearch = (treeTemplate, data, customCategories) => {
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
+                    question: rest,
                     isCustomQuestionCategoryQuestion: true
                 }
             }
@@ -423,7 +432,7 @@ const addQuestionGroupQuestionsToSearch = (treeTemplate, data, questionGroups) =
         };
 
         questionGroupQuestionsByCategory.map(question => {
-
+            let { citations, city, company_id, is_duplicate_from ,licenses, state,  ...rest } = question;
 
             treeTemplate.items[`${question.question_id}_group_${group.question_group_id}`] = {
                 id: `${question.question_id.toString()}_group_${group.question_group_id}`,
@@ -433,7 +442,7 @@ const addQuestionGroupQuestionsToSearch = (treeTemplate, data, questionGroups) =
                 isChildrenLoading: false,
                 data: {
                     title: question.explanation.concat('-').concat(question.question_id),
-                    question: {...question},
+                    question: rest,
                     isQuestionGroupQuestion: true
                 }
             }
@@ -471,6 +480,7 @@ const buildSearchTreeForQuestionView = questions => {
     treeTemplate.items['1'].children = questions.map(question => question.question_id);
 
     questions.map(question => {
+        let { citations, city, company_id, is_duplicate_from ,licenses, state,  ...rest } = question;
         treeTemplate.items[question.question_id] = {
             id: question.question_id.toString(),
             children: [],
@@ -479,7 +489,7 @@ const buildSearchTreeForQuestionView = questions => {
             isChildrenLoading: false,
             data: {
                 title: question.explanation.concat('-').concat(question.question_id),
-                question: {...question},
+                question: rest,
                 [findQuestionType(question)]: true
             }
         }

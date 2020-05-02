@@ -83,7 +83,7 @@ const CategoryViewTree = props => {
                 setTree(searchTree(searchValue, questionList, true));
 
             } else {
-                //setTree(initialTree(questionList));
+                setTree(initialTree(questionList));
             }
         }
     }, [questionList, searchValue]);
@@ -155,17 +155,11 @@ const CategoryViewTree = props => {
 
             });
 
-            const ref = firebase
+            /*const ref = firebase
                 .app()
                 .database()
                 .ref();
-            ref.update(updates);
-
-
-
-            //console.log(getItem(tree, [1, 0]))
-            //console.log(getTreePosition(tree, [0, 1]))
-            //console.log(getParent(tree, [0, 0]))
+            ref.update(updates);*/
 
         }
 
