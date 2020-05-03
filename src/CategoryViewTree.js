@@ -81,7 +81,7 @@ const CategoryViewTree = props => {
     useEffect(() => {
         if (!_.isEmpty(questionList) && !_.isEmpty(audit)) {
             if (searchValue !== '') {
-                setTree(searchTree(searchValue, questionList, true));
+                setTree(searchTree(searchValue, questionList, true, audit));
 
             } else {
                 setTree(initialTree(audit, questionList));
@@ -90,7 +90,7 @@ const CategoryViewTree = props => {
     }, [questionList, searchValue, audit]);
 
 
-    /*useEffect(() => {
+    useEffect(() => {
         const urlParams = location.pathname.split('/').slice(4);
         if(!_.isEmpty(tree) && searchValue === '' && _.isEmpty(selectedNode) && !_.isEmpty(urlParams)) {
             const categoryOrGroupItem = tree.items[urlParams[0]];
@@ -121,10 +121,10 @@ const CategoryViewTree = props => {
             buildRouteForSelectedItem(firstItemToSelect);
         }
 
-    }, [location.pathname, tree]);*/
+    }, [location.pathname, tree]);
 
     useEffect(() => {
-        if(!_.isEmpty(tree)) {
+        if(!_.isEmpty(tree) && searchValue === '') {
             let clonedTree = _.cloneDeep(tree);
             let alteredTreeItems = {};
             _.values(clonedTree.items).forEach(value => {
@@ -137,6 +137,7 @@ const CategoryViewTree = props => {
             }
 
             const flattenedTree = flattenTree(alteredTree);
+            console.log(flattenedTree)
 
             const parentNodes = flattenedTree.filter(item => item.item.data.isCategory || item.item.data.isGroup).map((node, index) => {
                 return {
@@ -244,7 +245,7 @@ const CategoryViewTree = props => {
                             setSelectedNode(item);
                         }
                         buildRouteForSelectedItem(item);
-                        if(item.data.isSimplifyaCategory || item.data.isCustomQuestionCategory || item.data.isQuestionGroup) {
+                        if(item.data.isCategory || item.data.isGroup) {
                             item.isExpanded ? onCollapse(item.id) : onExpand(item.id);
                         }
                     }}
