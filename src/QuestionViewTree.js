@@ -6,7 +6,7 @@ import VidVolumeMutedIcon from "@atlaskit/icon/glyph/vid-volume-muted";
 import styled from "styled-components";
 import baseItem, {withItemClick, withItemFocus} from "@atlaskit/item";
 import history from "./history";
-import {getItem} from "@atlaskit/tree/dist/cjs/utils/tree";
+import {flattenTree, getItem} from "@atlaskit/tree/dist/cjs/utils/tree";
 import { useLocation } from "react-router-dom";
 
 const Dot = styled.span`
@@ -52,6 +52,43 @@ const QuestionViewTree = props => {
         }
 
     }, [location.pathname, tree]);
+
+    useEffect(() => {
+        if(!_.isEmpty(tree) && searchValue === '') {
+            let clonedTree = _.cloneDeep(tree);
+            let alteredTreeItems = {};
+            _.values(clonedTree.items).forEach(value => {
+                alteredTreeItems[value.id] = { ...value, isExpanded: true }
+            })
+
+            const alteredTree = {
+                rootId: '1',
+                items: alteredTreeItems
+            }
+
+            const flattenedTree = flattenTree(alteredTree);
+
+            const questions = flattenedTree.filter(item => item.item.data.question && item.item.data.question.parent_question_id.toString() === '0')
+                .map((question, index) => {
+                    return {...question.item.data.question, question_order: index + 1}
+                });
+
+            console.log(questions)
+
+            let updates = {}
+
+            questions.forEach(question => {
+                updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/question_order'] = question.question_order;
+            });
+
+            /*const ref = firebase
+                .app()
+                .database()
+                .ref();
+            ref.update(updates);*/
+
+        }
+    }, [tree])
 
     const renderItem = ({
                             item,

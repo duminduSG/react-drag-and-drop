@@ -150,11 +150,16 @@ const CategoryViewTree = props => {
             let updates = {}
             updates['audits/2085/5ea7f3c1d56721001b64f4ce/parent_question_nodes'] = parentNodes;
 
-            const orderedCategoryQuestions = createCategoryQuestionOrder(flattenedTree);
+            const questions = flattenedTree.filter(item => item.item.data.question && (item.item.data.isSimplifyaQuestion || item.item.data.isCustomQuestionCategoryQuestion || item.item.data.isQuestionGroupQuestion) && item.item.data.question.parent_question_id.toString() === '0')
+                .map((question, index) => {
+                    return {...question.item.data.question, question_order: index + 1}
+                });
+
+            const uniqQuestions = _.uniqBy(questions, 'question_id');
             const orderedGroupQuestions = createQuestionGroupQuestionOrder(flattenedTree);
 
 
-            orderedCategoryQuestions.forEach(question => {
+            uniqQuestions.forEach(question => {
                 updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/question_order'] = question.question_order;
                 updates['audit_questions/2085/5ea7f3c1d56721001b64f4ce/' + question.question_id + '/category_order'] = question.category_order;
             });
@@ -168,11 +173,11 @@ const CategoryViewTree = props => {
 
             });
 
-            const ref = firebase
+            /*const ref = firebase
                 .app()
                 .database()
                 .ref();
-            ref.update(updates);
+            ref.update(updates);*/
 
         }
 
