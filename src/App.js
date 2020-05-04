@@ -22,7 +22,7 @@ function App() {
 
     useEffect(() => {
 
-        axios.get('http://34.211.0.229/firebase/custom/token', {
+        axios.get(process.env.REACT_APP_BACKEND_URL, {
             headers: {
                 Authorization: `Bearer ${process.env.REACT_APP_BACK_END_TOKEN}`
             }
